@@ -33,3 +33,5 @@ if __name__ == "__main__":
         port=8000,       # Port to serve the application
         reload=True      # Auto-reload on code changes (useful in development)
     )
+
+#to watch the stream go to http://127.0.0.1:8000/
