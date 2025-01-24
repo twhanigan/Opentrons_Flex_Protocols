@@ -34,4 +34,4 @@ if __name__ == "__main__":
         reload=True      # Auto-reload on code changes (useful in development)
     )
 
-#to watch the stream go to http://127.0.0.1:8000/
+#to watch the stream go to http://172.23.226.47:8000/

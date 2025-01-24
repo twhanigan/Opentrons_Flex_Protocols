@@ -14,7 +14,16 @@ requirements = {
 }
 
 def run(protocol: protocol_api.ProtocolContext):
+    #say hello
+    protocol.comment("Place BSA Standard in A1, Lysis buffer in A2, and samples in row B")
+    
+    num_samples = 5 #change this to the number of samples you need to run. The maximum is 18.
+    # Change these if not using 96-well
+    num_rows = 8  # A-H
+    num_replicates = 3  # the number of replicates
 
+    # Say hello
+    protocol.comment("Place BSA Standard in A1, Lysis buffer in A2, and samples in row B")
     # Load modules
     heater_shaker = protocol.load_module('heaterShakerModuleV1', 'D1')
     thermocycler = protocol.load_module('thermocyclerModuleV2')
@@ -41,6 +50,11 @@ def run(protocol: protocol_api.ProtocolContext):
     plate2 = protocol.load_labware('corning_96_wellplate_360ul_flat', 'B2')
     reservoir = protocol.load_labware('nest_12_reservoir_15ml', 'C2')
     
+    # Liquid definitions
+    bsa_standard = protocol.define_liquid(name = 'BSA Standard', display_color="#704848",)
+    lysis_buffer = protocol.define_liquid(name = 'Lysis Buffer', display_color="#FF0000",)
+    sample_liquids = [protocol.define_liquid(name = f'Sample {i + 1}', display_color="#FFA000",) for i in range(num_samples)]
+
     # Load pipettes
     p50_multi = protocol.load_instrument('flex_8channel_50', 'left') #, tip_racks=[tips_50]
     p1000_multi = protocol.load_instrument('flex_8channel_1000', 'right') #, tip_racks=[tips_200]
@@ -52,6 +66,8 @@ def run(protocol: protocol_api.ProtocolContext):
     p1000_multi.distribute(50, 
          temp_adapter['A2'],
          plate1.columns('1'),
+         rate = 0.5,
+         delay = 2,
          new_tip='once')
 
     # Step 2: move the 200uL partial tips to D4 and then the 50 uL partial tips to B3
@@ -65,6 +81,8 @@ def run(protocol: protocol_api.ProtocolContext):
     p50_multi.transfer(50,
         temp_adapter['A1'],
         plate1['A1'],
+        rate = 0.5,
+        delay = 2,
         mix_after=(3, 40),
         new_tip='once')
 
@@ -83,15 +101,52 @@ def run(protocol: protocol_api.ProtocolContext):
     p50_multi.aspirate(50,plate1['G1'])
     p50_multi.drop_tip()
 
-    # Step 7: Transfer samples to plate2
-    sample_map = {
-        'A': 'B1', 'B': 'B2', 'C': 'B3', 'D': 'B4',
-        'E': 'B5', 'F': 'B6', 'G': 'C1', 'H': 'C2'}
+    # assign sample locations dynamically
+    sample_locations = []
+    for i in range(num_samples):
+        if i < 6:  # B1 to B6
+            sample_locations.append(f'B{i + 1}')
+        elif i < 12:  # C1 to C6
+            sample_locations.append(f'C{i - 5}')
+        elif i < 18:  # D1 to D6
+            sample_locations.append(f'D{i - 11}')
+        else:
+            break  # Stop if we exceed the number of available rows/columns
 
-    for row, tube in sample_map.items():
-        p50_multi.distribute(10,
-                         temp_adapter[tube],
-                         [plate2[f'{row}{i}'] for i in range(4, 7)])
+    #print the locations of the samples
+    print("Sample Locations:", sample_locations)
+
+    # Predefined list of letters A-H
+    row = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+    # Create a list of rows that repeats based on num_samples
+    rows = [row[i % len(row)] for i in range(num_samples)]
+
+    # Create a dynamic sample map based on the assigned sample locations
+    sample_map = list(map(lambda i,j :(i,j), rows, sample_locations))
+
+    # Print the dynamic sample map for verification
+    print("Dynamic Sample Map:", sample_map)
+
+    # Iterate over the sample_map list
+    for index, (row, tube) in enumerate(sample_map):
+        if index < 8:
+            base_column = 4 + (index // 8)  # This will determine the starting column for each row
+        elif index< 16:
+            base_column = 6 + (index // 8)
+        else:
+            base_column = 8 + (index //8)
+
+        # Prepare destination wells
+        destination_wells = [f'{row}{base_column + (i % 3)}' for i in range(3)]  # Generate wells like A4, A5, A6 or B4, B5, B6, etc.
+        print("Distributing from " + tube + " to wells: ", destination_wells)
+        
+        #Transfer the samples onto plate 2
+        p50_multi.distribute(
+            10,
+            temp_adapter[tube],
+            [plate2[i] for i in destination_wells],
+            rate = 0.5)  # Distributing to three consecutive columns
 
     # Step 8: move the 50uL complete tips to A3
     protocol.move_labware(labware=tips_50, new_location="A3", use_gripper=True)
@@ -116,14 +171,14 @@ def run(protocol: protocol_api.ProtocolContext):
                         new_tip='once')
 
     # Step 14: Add reagent B
-    p1000_multi.distribute(70,
+    p1000_multi.distribute(72,
                         reservoir['A5'],
                         plate2.wells(),
                         new_tip='once')
 
     # Step 15: Add reagent c
-    p1000_multi.distribute(5,
-                        reservoir['A8'],
+    p1000_multi.distribute(3,
+                        reservoir['A9'],
                         plate2.wells(),
                         new_tip='once')
 
@@ -139,3 +194,5 @@ def run(protocol: protocol_api.ProtocolContext):
     heater_shaker.deactivate_heater()
     heater_shaker.open_labware_latch()
     temp_module.deactivate()
+
+    #Step 18: import the results of the Abs 562 nm assay from plate reader
