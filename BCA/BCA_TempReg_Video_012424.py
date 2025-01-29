@@ -1,11 +1,15 @@
 from opentrons import protocol_api
 from opentrons.protocol_api import SINGLE, ALL
+#import time
+#import sys
+#import imageio.v3 as iif
+#import imageio.v2 as iid
 import subprocess
 
 metadata = {
-    'protocolName': 'BSA Assay with Samples Stored at 4C',
+    'protocolName': 'BSA Assay with Video Recording',
     'author': 'Assistant',
-    'description': 'Serial dilution of BSA standard and sample processing. This includes cooling samples to 4c and heating plate to 37c with shaking. Records a video of the whole process'
+    'description': 'Serial dilution of BSA standard and sample processing. This includes cooling samples to 4c, heating plate to 37c with shaking and recording a video of the whole process. Place BSA Standard in A1, Lysis buffer in A2, change the number of samples and place samples in row B starting at B1. MINIMUM Sample volumen in eppendorf tubes is 40 uL. '
 }
 
 requirements = {
@@ -17,13 +21,17 @@ def run(protocol: protocol_api.ProtocolContext):
     #say hello
     protocol.comment("Place BSA Standard in A1, Lysis buffer in A2, and samples in row B")
     
-    num_samples = 5 #change this to the number of samples you need to run. The maximum is 18.
+    num_samples = 7 #change this to the number of samples you need to run. The maximum is 18.
     # Change these if not using 96-well
     num_rows = 8  # A-H
     num_replicates = 3  # the number of replicates
 
-    # Say hello
-    protocol.comment("Place BSA Standard in A1, Lysis buffer in A2, and samples in row B")
+    #Start recording the video
+    video_output_file = 'BCA_Assay_012425.mp4'
+    device_index = "<video2>"
+    duration = 200
+    video_process = subprocess.Popen(["python3", "/var/lib/jupyter/notebooks/record_video.py"])
+
     # Load modules
     heater_shaker = protocol.load_module('heaterShakerModuleV1', 'D1')
     thermocycler = protocol.load_module('thermocyclerModuleV2')
@@ -36,7 +44,7 @@ def run(protocol: protocol_api.ProtocolContext):
     temp_adapter = temp_module.load_labware('opentrons_24_aluminumblock_nest_1.5ml_screwcap')
 
     #set the heater_shaker temp to 60C
-    heater_shaker.set_and_wait_for_temperature(60)
+    heater_shaker.set_and_wait_for_temperature(37)
 
     #set the temp module to 0c
     temp_module.set_temperature(celsius=10)
@@ -66,7 +74,7 @@ def run(protocol: protocol_api.ProtocolContext):
     p1000_multi.distribute(50, 
          temp_adapter['A2'],
          plate1.columns('1'),
-         rate = 0.5,
+         rate = 0.35,
          delay = 2,
          new_tip='once')
 
@@ -81,7 +89,7 @@ def run(protocol: protocol_api.ProtocolContext):
     p50_multi.transfer(50,
         temp_adapter['A1'],
         plate1['A1'],
-        rate = 0.5,
+        rate = 0.35,
         delay = 2,
         mix_after=(3, 40),
         new_tip='once')
@@ -93,6 +101,7 @@ def run(protocol: protocol_api.ProtocolContext):
         p50_multi.transfer(50,
                          plate1[f'{source}1'],
                          plate1[f'{dest}1'],
+                         rate = 0.5,
                          mix_after=(3, 40),
                          new_tip='never', 
                          disposal_vol=0)
@@ -187,7 +196,7 @@ def run(protocol: protocol_api.ProtocolContext):
     protocol.move_labware(labware=plate2, new_location=hs_adapter,use_gripper=True)
     heater_shaker.close_labware_latch()
     heater_shaker.set_and_wait_for_shake_speed(500)
-    protocol.delay(minutes=20)
+    protocol.delay(minutes=5)
 
     #Step 17 deactivate heater shaker and temp modules
     heater_shaker.deactivate_shaker()
@@ -195,4 +204,5 @@ def run(protocol: protocol_api.ProtocolContext):
     heater_shaker.open_labware_latch()
     temp_module.deactivate()
 
-    #Step 18: import the results of the Abs 562 nm assay from plate reader
+    # Stop video recording after the main task is completed
+    video_process.terminate()

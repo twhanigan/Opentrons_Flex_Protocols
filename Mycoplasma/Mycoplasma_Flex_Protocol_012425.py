@@ -20,7 +20,13 @@ def run(protocol: protocol_api.ProtocolContext):
 
     # Step 4: Gel preparation and loading (manual step for now)
     protocol.comment("This protcol runs pcr assay for mycoplasma contamination.")
-
+    
+    #Start recording the video
+    video_output_file = 'BCA_Assay_012425.mp4'
+    device_index = "<video2>"
+    duration = 200
+    video_process = subprocess.Popen(["python3", "/var/lib/jupyter/notebooks/record_video.py"])
+    
     # Load modules
     heater_shaker = protocol.load_module('heaterShakerModuleV1', 'D1')
     thermocycler = protocol.load_module('thermocyclerModuleV2')
@@ -121,6 +127,9 @@ def run(protocol: protocol_api.ProtocolContext):
     thermocycler.set_block_temperature(72, hold_time_minutes=1)  # Final Extension
     thermocycler.set_block_temperature(4)  # Hold at 4°C
     thermocycler.open_lid()
-
+    
+    # Stop video recording after the main task is completed
+    video_process.terminate()
+    
     # Step 4: Gel preparation and loading (manual step for now)
     protocol.comment("After PCR, analyze products on a 2% agarose gel stained with ethidium bromide or SafeView.")
