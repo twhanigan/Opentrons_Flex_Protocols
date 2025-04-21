@@ -33,7 +33,10 @@ def run(protocol: protocol_api.ProtocolContext):
     protocol.comment(
         "Place BSA Standard in A1, Lysis buffer in A2, tbta in A3, biotin in A4, cuso4 in A5, tcep in A6 and samples in row B")
     protocol.comment("Running the BCA assay")
-    
+
+    target_concentration = 1
+    final_volume = 0.5
+
     num_samples = 10 #change this to the number of samples you need to run. The maximum is 18.
     # Change these if not using 96-well
     num_rows = 8  # A-H
@@ -67,15 +70,16 @@ def run(protocol: protocol_api.ProtocolContext):
     partial_50 = protocol.load_labware(load_name="opentrons_flex_96_filtertiprack_50ul",location="A3")
     tips_200 = protocol.load_labware('opentrons_flex_96_filtertiprack_200ul', 'B4')
     partial_200 = protocol.load_labware(load_name="opentrons_flex_96_filtertiprack_200ul",location="B3")
+    tips_1000 = protocol.load_labware('opentrons_flex_96_filtertiprack_1000ul', 'C4')
     plate1 = protocol.load_labware('corning_96_wellplate_360ul_flat', 'A2')
     plate2 = protocol.load_labware('corning_96_wellplate_360ul_flat', 'B2')
     reservoir = protocol.load_labware('nest_12_reservoir_15ml', 'C2')
     
     # Liquid definitions
     bsa_standard = protocol.define_liquid(name = 'BSA Standard', display_color="#704848",)
-    bsa_reag_a = protocol.define_liquid(name = 'BSA Standard', display_color="#704300",)
-    bsa_reag_b = protocol.define_liquid(name = 'BSA Standard', display_color="#704900",)
-    bsa_reag_c = protocol.define_liquid(name = 'BSA Standard', display_color="#701100",)
+    bsa_reag_a = protocol.define_liquid(name = 'Reagent A', display_color="#704300",)
+    bsa_reag_b = protocol.define_liquid(name = 'Reagent B', display_color="#704900",)
+    bsa_reag_c = protocol.define_liquid(name = 'Reagent C', display_color="#701100",)
     excess_lysis = protocol.define_liquid(name='Excess Lysis Buffer', display_color="#FFC0CB")  # Pink
     sample_liquids = [protocol.define_liquid(name = f'Sample {i + 1}', display_color="#FFA000",) for i in range(num_samples)]
     biotin_azide = protocol.define_liquid(name = 'Biotin Azide', display_color="#FF0011",)
@@ -87,11 +91,11 @@ def run(protocol: protocol_api.ProtocolContext):
     reservoir['A1'].load_liquid(liquid=bsa_reag_a, volume=20000)  # Excess lysis buffer
     reservoir['A3'].load_liquid(liquid=bsa_reag_b, volume=20000)  # Excess lysis buffer
     reservoir['A5'].load_liquid(liquid=bsa_reag_c, volume=20000)  # Excess lysis buffer
-    reservoir['A7'].load_liquid(liquid=excess_lysis, volume=20000)  # Excess lysis buffer
+    reservoir['A7'].load_liquid(liquid=excess_lysis, volume=15000)  # Excess lysis buffer
 
     # Load pipettes
-    p50_multi = protocol.load_instrument('flex_8channel_50', 'left') #, tip_racks=[tips_50]
-    p1000_multi = protocol.load_instrument('flex_8channel_1000', 'right') #, tip_racks=[tips_200]
+    p50_multi = protocol.load_instrument('flex_8channel_50', 'left') 
+    p1000_multi = protocol.load_instrument('flex_8channel_1000', 'right') 
 
     #Configure the p1000 pipette to use single tip NOTE: this resets the pipettes tip racks!
     p1000_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[partial_200])
@@ -193,7 +197,7 @@ def run(protocol: protocol_api.ProtocolContext):
     p50_multi.distribute(10, plate1['A1'], [plate2[f'A{i}'] for i in range(1, 4)])
 
     # Step 11: move the 50 uL partial tips to C3 and the 200uL complete tips to B3
-    protocol.move_labware(labware=partial_50, new_location="C4", use_gripper=True)
+    protocol.move_labware(labware=partial_50, new_location="C3", use_gripper=True)
     protocol.move_labware(labware=tips_200, new_location="B3", use_gripper=True)
 
     #Step 12: Load the p1000 with full tip rack
@@ -207,13 +211,13 @@ def run(protocol: protocol_api.ProtocolContext):
 
     # Step 14: Add reagent B
     p1000_multi.distribute(72,
-                        reservoir['A5'],
+                        reservoir['A3'],
                         plate2.wells(),
                         new_tip='once')
 
     # Step 15: Add reagent c
     p50_multi.distribute(3,
-                        reservoir['A9'],
+                        reservoir['A5'],
                         plate2.wells(),
                         new_tip='once')
 
@@ -322,8 +326,7 @@ def run(protocol: protocol_api.ProtocolContext):
     unknown_samples = final_df.iloc[8:8 + num_samples]
     unknown_samples['Mean Absorbance'] = unknown_samples[['Replicate 1', 'Replicate 2', 'Replicate 3']].mean(axis=1)
     unknown_samples['Protein Concentration (mg/mL)'] = (unknown_samples['Mean Absorbance'] - intercept) / slope
-    target_concentration = 1
-    final_volume = 0.5
+
 
     unknown_samples['Sample Volume (mL)'] = (target_concentration * final_volume) / unknown_samples['Protein Concentration (mg/mL)']
     unknown_samples['Diluent Volume (mL)'] = final_volume - unknown_samples['Sample Volume (mL)']
