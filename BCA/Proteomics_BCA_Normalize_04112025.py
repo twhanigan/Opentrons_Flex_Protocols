@@ -88,17 +88,17 @@ def run(protocol: protocol_api.ProtocolContext):
     tcep = protocol.define_liquid(name = 'TCEP', display_color="#FF0044",)
 
     # Reservoir assignments for washes and digestion
-    reservoir['A1'].load_liquid(liquid=bsa_reag_a, volume=20000)  # Excess lysis buffer
-    reservoir['A3'].load_liquid(liquid=bsa_reag_b, volume=20000)  # Excess lysis buffer
-    reservoir['A5'].load_liquid(liquid=bsa_reag_c, volume=20000)  # Excess lysis buffer
-    reservoir['A7'].load_liquid(liquid=excess_lysis, volume=15000)  # Excess lysis buffer
+    reservoir['A1'].load_liquid(liquid=bsa_reag_a, volume=20000)  
+    reservoir['A3'].load_liquid(liquid=bsa_reag_b, volume=20000)  
+    reservoir['A5'].load_liquid(liquid=bsa_reag_c, volume=20000)  
+    reservoir['A7'].load_liquid(liquid=excess_lysis, volume=15000) 
 
     # Load pipettes
     p50_multi = protocol.load_instrument('flex_8channel_50', 'left') 
     p1000_multi = protocol.load_instrument('flex_8channel_1000', 'right') 
 
-    #Configure the p1000 pipette to use single tip NOTE: this resets the pipettes tip racks!
-    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[partial_200])
+    #Configure the p1000 pipette to use all channels
+    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[tips_200])
 
     # Steps 1: Add lysis buffer to column 1 of plate1. 
     p1000_multi.distribute(50, 
@@ -114,11 +114,11 @@ def run(protocol: protocol_api.ProtocolContext):
 
     #Step 3: Configure the p50 pipette to use single tip NOTE: this resets the pipettes tip racks!
     #p50_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[partial_50])
-    p50_multi.configure_nozzle_layout(style=ALL, start="A1",tip_racks=[partial_50])
+    p50_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[partial_50])
 
     # Step 4: Transfer BSA standard (20 mg/ml) to first well of column 1
     p50_multi.transfer(50,
-        reservoir['A7'],
+        temp_module['A1'],
         plate1['A1'],
         rate = 0.35,
         delay = 2,
