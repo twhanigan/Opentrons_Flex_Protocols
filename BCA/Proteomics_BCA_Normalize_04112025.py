@@ -98,11 +98,11 @@ def run(protocol: protocol_api.ProtocolContext):
     p1000_multi = protocol.load_instrument('flex_8channel_1000', 'right') 
 
     #Configure the p1000 pipette to use single tip NOTE: this resets the pipettes tip racks!
-    p1000_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[partial_200])
+    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[partial_200])
 
     # Steps 1: Add lysis buffer to column 1 of plate1. 
     p1000_multi.distribute(50, 
-         temp_adapter['A2'],
+         reservoir['A7'],
          plate1.columns('1'),
          rate = 0.35,
          delay = 2,
@@ -113,11 +113,12 @@ def run(protocol: protocol_api.ProtocolContext):
     protocol.move_labware(labware=partial_50, new_location="B3", use_gripper=True)
 
     #Step 3: Configure the p50 pipette to use single tip NOTE: this resets the pipettes tip racks!
-    p50_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[partial_50])
+    #p50_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[partial_50])
+    p50_multi.configure_nozzle_layout(style=ALL, start="A1",tip_racks=[partial_50])
 
     # Step 4: Transfer BSA standard (20 mg/ml) to first well of column 1
     p50_multi.transfer(50,
-        temp_adapter['A1'],
+        reservoir['A7'],
         plate1['A1'],
         rate = 0.35,
         delay = 2,
@@ -201,7 +202,7 @@ def run(protocol: protocol_api.ProtocolContext):
     protocol.move_labware(labware=tips_200, new_location="B3", use_gripper=True)
 
     #Step 12: Load the p1000 with full tip rack
-    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[tips_200]) #,
+    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[tips_1000]) #,
 
     # Step 13: Add reagent A
     p1000_multi.distribute(75,
