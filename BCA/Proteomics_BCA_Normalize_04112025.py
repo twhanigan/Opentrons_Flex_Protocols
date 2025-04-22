@@ -26,7 +26,6 @@ def run(protocol: protocol_api.ProtocolContext):
 
     target_concentration = 1
     final_volume = 0.5
-
     num_samples = 10 #change this to the number of samples you need to run. The maximum is 18.
     num_rows = 8  # A-H
     num_replicates = 3  # the number of replicates
@@ -34,7 +33,7 @@ def run(protocol: protocol_api.ProtocolContext):
     #Start recording the video
     video_output_file = 'BCA_Assay_012425.mp4'
     device_index = "<video2>"
-    duration = 200
+    duration = 400
     video_process = subprocess.Popen(["python3", "/var/lib/jupyter/notebooks/record_video.py"])
 
     # Load modules
@@ -57,8 +56,7 @@ def run(protocol: protocol_api.ProtocolContext):
     # Load labware
     tips_50 = protocol.load_labware('opentrons_flex_96_filtertiprack_50ul', 'A4')
     partial_50 = protocol.load_labware(load_name="opentrons_flex_96_filtertiprack_50ul",location="A3")
-    tips_200 = protocol.load_labware('opentrons_flex_96_filtertiprack_200ul', 'B4')
-    partial_200 = protocol.load_labware(load_name="opentrons_flex_96_filtertiprack_200ul",location="B3")
+    tips_200 = protocol.load_labware(load_name="opentrons_flex_96_filtertiprack_200ul",location="B3")
     tips_1000 = protocol.load_labware('opentrons_flex_96_filtertiprack_1000ul', 'C4')
     plate1 = protocol.load_labware('corning_96_wellplate_360ul_flat', 'A2')
     plate2 = protocol.load_labware('corning_96_wellplate_360ul_flat', 'B2')
@@ -83,7 +81,7 @@ def run(protocol: protocol_api.ProtocolContext):
     p1000_multi = protocol.load_instrument('flex_8channel_1000', 'right') 
 
     #Configure the p1000 pipette to use all channels
-    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[partial_200])
+    p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[tips_200])
 
     # Steps 1: Add lysis buffer to column 1 of plate1. 
     p1000_multi.distribute(50, 
@@ -94,7 +92,7 @@ def run(protocol: protocol_api.ProtocolContext):
          new_tip='once')
 
     # Step 2: move the 200uL partial tips to D4 and then the 50 uL partial tips to B3
-    protocol.move_labware(labware=partial_200, new_location="D4", use_gripper=True)
+    protocol.move_labware(labware=tips_200, new_location="D4", use_gripper=True)
     protocol.move_labware(labware=partial_50, new_location="B3", use_gripper=True)
 
     #Step 3: Configure the p50 pipette to use single tip NOTE: this resets the pipettes tip racks!
@@ -160,7 +158,7 @@ def run(protocol: protocol_api.ProtocolContext):
         
         #Transfer the samples onto plate 2
         p50_multi.distribute(
-            5,
+            10,
             temp_adapter[tube],
             [plate2[i] for i in destination_wells],
             rate = 0.5)  # Distributing to three consecutive columns
@@ -172,30 +170,29 @@ def run(protocol: protocol_api.ProtocolContext):
     p50_multi.configure_nozzle_layout(style=ALL, tip_racks=[tips_50]) #, 
 
     #Step 10: Pipette triplicate of controls from plate1 column 1 to plate2 columns 1,2,3 
-    p50_multi.distribute(5, plate1['A1'], [plate2[f'A{i}'] for i in range(1, 4)])
+    p50_multi.distribute(10, plate1['A1'], [plate2[f'A{i}'] for i in range(1, 4)])
 
     # Step 11: move the 50 uL partial tips to C3 and the 200uL complete tips to B3
     protocol.move_labware(labware=partial_50, new_location="A4", use_gripper=True)
-    #protocol.move_labware(labware=tips_200, new_location="B3", use_gripper=True)
     protocol.move_labware(labware=tips_1000, new_location="B3", use_gripper=True)
 
     #Step 12: Load the p1000 with full tip rack
     p1000_multi.configure_nozzle_layout(style=ALL, tip_racks=[tips_1000]) #,
 
     # Step 13: Add reagent A
-    p1000_multi.distribute(50,
+    p1000_multi.distribute(75,
                         reservoir['A1'],
                         plate2.wells(),
                         new_tip='once')
 
     # Step 14: Add reagent B
-    p1000_multi.distribute(48,
+    p1000_multi.distribute(72,
                         reservoir['A3'],
                         plate2.wells(),
                         new_tip='once')
 
     # Step 15: Add reagent c
-    p50_multi.distribute(2,
+    p50_multi.distribute(3,
                         reservoir['A5'],
                         plate2.wells(),
                         new_tip='once')
@@ -222,10 +219,6 @@ def run(protocol: protocol_api.ProtocolContext):
     # Tell the robot that new labware will be placed onto the deck
     protocol.move_labware(labware=plate1, new_location=protocol_api.OFF_DECK)
     protocol.move_labware(labware=plate2, new_location=protocol_api.OFF_DECK)
-
-    # move the complete 200uL to A4 and then the partial 200 uL tips to B3
-    #protocol.move_labware(labware=tips_1000, new_location="C4", use_gripper=True)
-    #protocol.move_labware(labware=partial_200, new_location="B3", use_gripper=True)
 
     #Configure the p1000 pipette to use single tip NOTE: this resets the pipettes tip racks!
     p1000_multi.configure_nozzle_layout(style=SINGLE, start="A1",tip_racks=[tips_1000  ])
